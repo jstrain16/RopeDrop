@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alta Eyes
 
-## Getting Started
+Next.js API + Supabase/Postgres schema + Expo client for Alta terrain status, change detection, and notification preferences.
 
-First, run the development server:
+## Prereqs
+- Node 20+
+- Postgres (Supabase connection string works)
+- npm
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Environment
+Copy `docs.env.example` to `.env.local` (and `mobile/.env` if desired):
+```
+DATABASE_URL=postgres://user:password@host:5432/db
+CRON_SECRET=replace-me
+DEMO_USER_ID=00000000-0000-0000-0000-000000000000
+API_BASE_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database
+Run migrations (raw SQL):
+```
+npm run db:migrate
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Tables: lifts, trails, terrain_areas, access_gates, history tables, app_users, prefs, pending_notifications.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Backend (Next.js)
+- Dev server: `npm run dev`
+- Cron endpoints (require `x-cron-secret` header):
+  - `POST /api/internal/sync` — fetch Alta HTML, upsert entities, record history, queue notifications
+  - `POST /api/internal/process-pending` — stub processor, marks pending_notifications as processed
+- Public endpoints:
+  - `GET /api/status/overview`
+  - `GET /api/lifts/:slug`
+  - `GET /api/trails/:slug`
+  - `GET /api/terrain-areas/:slug`
+  - Prefs (expects `x-user-id` header or `userId` query, falls back to DEMO_USER_ID):
+    - `GET /api/me/preferences`
+    - `POST /api/me/preferences/terrain-areas/:id` `{ "notify_enabled": bool }`
+    - `POST /api/me/preferences/trails/:id` `{ "notify_enabled": bool }`
 
-## Learn More
+### Manual sync
+```
+curl -X POST http://localhost:3000/api/internal/sync -H "x-cron-secret:$CRON_SECRET"
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Mobile (Expo)
+Located in `mobile/`.
+```
+cd mobile
+npm install
+npm start
+```
+Environment for mobile (optional in `mobile/.env`):
+```
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000
+EXPO_PUBLIC_DEMO_USER_ID=00000000-0000-0000-0000-000000000000
+```
+Screens:
+- Home: overview + favorites
+- Terrain area detail: status + notify toggle
+- Trail detail: status/history + notify toggle
+- Settings: list/toggle enabled notifications
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+- Scraper respects Alta front-end: parses `window.Alta.liftStatus` from the public page with a custom User-Agent.
+- Notification delivery is stubbed; only queueing + processed flag are implemented.
