@@ -1,29 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { slug: string } },
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  try {
-    const areaRes = await query(
-      'SELECT id, name, slug, status, notes, last_updated_at FROM terrain_areas WHERE slug = $1',
-      [params.slug],
-    );
-    const area = areaRes.rows[0];
-    if (!area) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
+  const { slug } = await params;
 
-    // The source data does not expose direct mappings; return placeholders for now.
-    return NextResponse.json({
-      terrain_area: area,
-      lifts: [],
-      trails: [],
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to load terrain area' }, { status: 500 });
+  const area = await query<{
+    id: number;
+    name: string;
+    slug: string;
+    status: string;
+    notes: string | null;
+    last_updated_at: Date;
+  }>(
+    `SELECT id, name, slug, status, notes, last_updated_at
+     FROM terrain_areas
+     WHERE slug = $1`,
+    [slug]
+  );
+
+  if (area.length === 0) {
+    return NextResponse.json({ error: 'Terrain area not found' }, { status: 404 });
   }
-}
 
+  const history = await query<{
+    id: number;
+    old_status: string | null;
+    new_status: string;
+    changed_at: Date;
+  }>(
+    `SELECT id, old_status, new_status, changed_at
+     FROM terrain_area_status_history
+     WHERE terrain_area_id = $1
+     ORDER BY changed_at DESC
+     LIMIT 20`,
+    [area[0].id]
+  );
+
+  return NextResponse.json({ terrain_area: area[0], history });
+}

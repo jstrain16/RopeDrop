@@ -1,39 +1,40 @@
-#!/usr/bin/env node
-/* eslint-disable @typescript-eslint/no-require-imports */
+const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
 
-async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.error('DATABASE_URL is required to run migrations.');
-    process.exit(1);
-  }
-
-  const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
-  const files = fs
-    .readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-
-  const pool = new Pool({ connectionString: databaseUrl, max: 2 });
-
-  try {
-    for (const file of files) {
-      const fullPath = path.join(migrationsDir, file);
-      const sql = fs.readFileSync(fullPath, 'utf8');
-      console.log(`Running migration ${file}...`);
-      await pool.query(sql);
-      console.log(`Finished ${file}`);
-    }
-  } finally {
-    await pool.end();
-  }
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  console.error('DATABASE_URL is required');
+  process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const pool = new Pool({ connectionString: dbUrl });
 
+async function run() {
+  const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
+  const files = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort();
+
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    const client = await pool.connect();
+    try {
+      console.log(`Applying migration ${file}...`);
+      await client.query('BEGIN');
+      await client.query(sql);
+      await client.query('COMMIT');
+      console.log(`✓ ${file}`);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error(`✗ ${file} failed:`, err);
+      process.exit(1);
+    } finally {
+      client.release();
+    }
+  }
+
+  await pool.end();
+}
+
+run().catch(console.error);

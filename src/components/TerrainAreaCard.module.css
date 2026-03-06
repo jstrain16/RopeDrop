@@ -1,0 +1,43 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.status {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.open {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.closed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.notes {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
