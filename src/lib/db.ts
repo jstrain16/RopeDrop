@@ -10,10 +10,10 @@ export const pool = new Pool({
   // Optional: add pooling options
 });
 
-export async function query<T>(text: string, params?: any[]): Promise<T[]> {
+export async function query(text: string, params?: any[]): Promise<any[]> {
   const client = await pool.connect();
   try {
-    const res = await client.query<T>(text, params);
+    const res = await client.query(text, params);
     return res.rows;
   } finally {
     client.release();

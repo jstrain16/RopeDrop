@@ -22,7 +22,7 @@ export async function syncAlta(): Promise<void> {
   }
 
   const html = await res.text();
-  const scriptMatch = html.match(/window\.Alta\.liftStatus\s*=\s*({.*?});/s);
+  const scriptMatch = html.match(/window\.Alta\.liftStatus\s*=\s*({[\s\S]*?});/);
   if (!scriptMatch) {
     throw new Error('Could not find window.Alta.liftStatus in page');
   }
