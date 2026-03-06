@@ -1,56 +1,21 @@
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool } from 'pg';
 
-type QueryArgs = ReadonlyArray<unknown> | undefined;
-
-declare global {
-  var __dbPool: Pool | undefined;
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('DATABASE_URL is required');
 }
 
-function createPool() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not set');
-  }
-  return new Pool({
-    connectionString,
-    max: 10,
-  });
-}
+export const pool = new Pool({
+  connectionString,
+  // Optional: add pooling options
+});
 
-function getPool() {
-  if (!global.__dbPool) {
-    global.__dbPool = createPool();
-  }
-  return global.__dbPool;
-}
-
-export async function query<T = unknown>(
-  text: string,
-  params?: QueryArgs,
-): Promise<QueryResult<T>> {
-  const pool = getPool();
-  return pool.query<T>(text, params);
-}
-
-export async function getClient(): Promise<PoolClient> {
-  const pool = getPool();
-  return pool.connect();
-}
-
-export async function withTransaction<T>(
-  fn: (client: PoolClient) => Promise<T>,
-): Promise<T> {
-  const client = await getClient();
+export async function query<T>(text: string, params?: any[]): Promise<T[]> {
+  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
+    const res = await client.query<T>(text, params);
+    return res.rows;
   } finally {
     client.release();
   }
 }
-
