@@ -30,5 +30,5 @@ export async function GET() {
      ORDER BY name`
   );
 
-  return NextResponse.json({ lifts, terrain_areas });
+  return NextResponse.json({ lifts, terrain_areas: terrainAreas });
 }
