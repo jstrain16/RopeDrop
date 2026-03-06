@@ -23,10 +23,7 @@ type Trail = {
   is_groomed: boolean;
 };
 
-export async function generateStaticParams() {
-  const lifts = await query<Lift>('SELECT slug FROM lifts');
-  return lifts.map(lift => ({ slug: lift.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function LiftDetailPage(props: { params: Promise<{ slug: string }> }) {
   const { slug } = await props.params;

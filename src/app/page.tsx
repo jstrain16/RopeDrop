@@ -17,6 +17,8 @@ type TerrainArea = {
   notes: string | null;
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const [lifts, terrainAreas] = await Promise.all([
     query<Lift>('SELECT id, name, slug, is_open FROM lifts ORDER BY name'),

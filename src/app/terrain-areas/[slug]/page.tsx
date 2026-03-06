@@ -19,10 +19,7 @@ type History = {
   changed_at: Date;
 };
 
-export async function generateStaticParams() {
-  const areas = await query<TerrainArea>('SELECT slug FROM terrain_areas');
-  return areas.map(area => ({ slug: area.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function TerrainAreaPage(props: { params: Promise<{ slug: string }> }) {
   const { slug } = await props.params;

@@ -2,6 +2,8 @@ import { query } from '@/lib/db';
 
 const DEMO_USER_ID = process.env.DEMO_USER_ID;
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
   if (!DEMO_USER_ID) {
     return <p>Configuration error: DEMO_USER_ID not set.</p>;

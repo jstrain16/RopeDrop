@@ -27,10 +27,7 @@ type History = {
   changed_at: Date;
 };
 
-export async function generateStaticParams() {
-  const trails = await query<Trail>('SELECT slug FROM trails');
-  return trails.map(trail => ({ slug: trail.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function TrailPage(props: { params: Promise<{ slug: string }> }) {
   const { slug } = await props.params;
