@@ -121,7 +121,7 @@ function normalizeTerrainArea(raw: AltaRecord): CurrentTerrainArea {
     name,
     slug: slugify(name),
     status,
-    notes: raw.notes ?? null,
+    notes: toStringOrNull(raw.notes),
     updatedAt,
   };
 }
