@@ -62,6 +62,10 @@ function booleanFromStatus(status?: string): boolean {
   return normalized.includes('open') && !normalized.includes('closed');
 }
 
+function toStringOrNull(value: any): string | null {
+  return value == null ? null : typeof value === 'string' ? value : String(value);
+}
+
 function normalizeTrail(raw: AltaRecord, liftId: number, fallbackUpdatedAt: string): CurrentTrail {
   const id = Number(raw.id ?? raw.runId ?? raw.run_id);
   const name = String(raw.name ?? raw.runName ?? raw.run_name ?? 'Unknown').trim();
@@ -99,8 +103,8 @@ function normalizeLift(raw: AltaRecord): CurrentLift {
     name,
     slug: slugify(name),
     capacity: raw.capacity ? Number(raw.capacity) : raw.capacity === 0 ? 0 : null,
-    openingAt: raw.openingAt ?? raw.openTime ?? null,
-    closingAt: raw.closingAt ?? raw.closeTime ?? null,
+    openingAt: toStringOrNull(raw.openingAt ?? raw.openTime),
+    closingAt: toStringOrNull(raw.closingAt ?? raw.closeTime),
     isOpen: booleanFromStatus(status.length ? status : raw.isOpen ? 'open' : ''),
     updatedAt,
     runs,
