@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool, QueryResultRow } from 'pg';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -7,20 +7,24 @@ if (!connectionString) {
 
 export const pool = new Pool({
   connectionString,
-  // Optional: add pooling options
 });
 
-export async function query(text: string, params?: any[]): Promise<any[]> {
+export async function query<T extends QueryResultRow>(
+  text: string,
+  params?: any[]
+): Promise<T[]> {
   const client = await pool.connect();
   try {
-    const res = await client.query(text, params);
+    const res = await client.query<T>(text, params);
     return res.rows;
   } finally {
     client.release();
   }
 }
 
-export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+export async function withTransaction<T>(
+  callback: (client: PoolClient) => Promise<T>
+): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
