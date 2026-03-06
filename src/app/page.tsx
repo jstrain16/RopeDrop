@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { supabaseSelect } from '@/lib/db';
 import LiftCard from '@/components/LiftCard';
 import TerrainAreaCard from '@/components/TerrainAreaCard';
 
@@ -20,10 +20,8 @@ type TerrainArea = {
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [lifts, terrainAreas] = await Promise.all([
-    query<Lift>('SELECT id, name, slug, is_open FROM lifts ORDER BY name'),
-    query<TerrainArea>('SELECT id, name, slug, status, notes FROM terrain_areas ORDER BY name'),
-  ]);
+  const lifts = await supabaseSelect<Lift>('lifts', 'id, name, slug, is_open');
+  const terrainAreas = await supabaseSelect<TerrainArea>('terrain_areas', 'id, name, slug, status, notes');
 
   return (
     <main style={{ padding: '1rem', maxWidth: '600px', margin: '0 auto' }}>

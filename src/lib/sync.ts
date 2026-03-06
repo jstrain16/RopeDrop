@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { supabaseUpsert, supabaseSelect } from '@/lib/db';
 import { extractWindowAltaScript, parseWindowAlta } from './alta/scraper';
 
 function slugify(name: string): string {
@@ -49,25 +49,16 @@ export async function syncAlta(): Promise<void> {
     const closingAt = (lift as any).closingAt || (lift as any).closeTime || null;
     const slug = slugify(name);
 
-    const existing = await query<{ id: number; is_open: boolean }>(
-      `SELECT id, is_open FROM lifts WHERE slug = $1`,
-      [slug]
-    );
-
-    if (existing.length > 0) {
-      await query<any>(
-        `UPDATE lifts
-         SET name = $1, capacity = $2, opening_at = $3, closing_at = $4, is_open = $5, updated_at = NOW()
-         WHERE slug = $6`,
-        [name, capacity, openingAt, closingAt, isOpen, slug]
-      );
-    } else {
-      await query<any>(
-        `INSERT INTO lifts (name, slug, capacity, opening_at, closing_at, is_open, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [name, slug, capacity, openingAt, closingAt, isOpen]
-      );
-    }
+    // Upsert lift by slug
+    await supabaseUpsert('lifts', {
+      name,
+      slug,
+      capacity,
+      opening_at: openingAt,
+      closing_at: closingAt,
+      is_open: isOpen,
+      updated_at: new Date().toISOString(),
+    }, 'slug');
   }
 
   // Sync terrain areas
@@ -78,25 +69,15 @@ export async function syncAlta(): Promise<void> {
     const notes = (area as any).notes ?? null;
     const slug = slugify(name);
 
-    const existing = await query<{ id: number }>(
-      `SELECT id FROM terrain_areas WHERE slug = $1`,
-      [slug]
-    );
-
-    if (existing.length > 0) {
-      await query<any>(
-        `UPDATE terrain_areas SET name = $1, status = $2, notes = $3, updated_at = NOW() WHERE slug = $4`,
-        [name, status, notes, slug]
-      );
-    } else {
-      await query<any>(
-        `INSERT INTO terrain_areas (name, slug, status, notes, updated_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        [name, slug, status, notes]
-      );
-    }
+    await supabaseUpsert('terrain_areas', {
+      id,
+      name,
+      slug,
+      status,
+      notes,
+      updated_at: new Date().toISOString(),
+    }, 'slug');
   }
 
-  // TODO: sync trails linking to lifts (requires more fields)
+  // Note: trails sync would require more data mapping; focus on lifts/areas for now.
 }
-

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 const DEMO_USER_ID = process.env.DEMO_USER_ID;
 if (!DEMO_USER_ID) {
@@ -17,21 +17,19 @@ export async function POST(
   }
 
   const userId = DEMO_USER_ID;
-  await query('INSERT INTO app_users (id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
-
   const body = await request.json();
   const { notify_enabled } = body;
   if (typeof notify_enabled !== 'boolean') {
     return NextResponse.json({ error: 'Missing notify_enabled' }, { status: 400 });
   }
 
-  await query(
-    `INSERT INTO user_terrain_area_prefs (user_id, terrain_area_id, notify_enabled)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (user_id, terrain_area_id)
-     DO UPDATE SET notify_enabled = $3`,
-    [userId, terrainAreaId, notify_enabled]
-  );
+  const { error } = await supabase
+    .from('user_terrain_area_prefs')
+    .upsert({ user_id: userId, terrain_area_id: terrainAreaId, notify_enabled }, { onConflict: 'user_id,terrain_area_id' });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

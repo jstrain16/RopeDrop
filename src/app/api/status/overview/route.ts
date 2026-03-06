@@ -1,34 +1,21 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export async function GET() {
-  const lifts = await query<{
-    id: number;
-    name: string;
-    slug: string;
-    capacity: number | null;
-    opening_at: string | null;
-    closing_at: string | null;
-    is_open: boolean;
-    last_updated_at: Date;
-  }>(
-    `SELECT id, name, slug, capacity, opening_at, closing_at, is_open, last_updated_at
-     FROM lifts
-     ORDER BY name`
-  );
+  const [liftsRes, terrainRes] = await Promise.all([
+    supabase.from('lifts').select('id, name, slug, capacity, opening_at, closing_at, is_open, updated_at').order('name'),
+    supabase.from('terrain_areas').select('id, name, slug, status, notes, updated_at').order('name'),
+  ]);
 
-  const terrainAreas = await query<{
-    id: number;
-    name: string;
-    slug: string;
-    status: string;
-    notes: string | null;
-    last_updated_at: Date;
-  }>(
-    `SELECT id, name, slug, status, notes, last_updated_at
-     FROM terrain_areas
-     ORDER BY name`
-  );
+  if (liftsRes.error) {
+    return NextResponse.json({ error: liftsRes.error.message }, { status: 500 });
+  }
+  if (terrainRes.error) {
+    return NextResponse.json({ error: terrainRes.error.message }, { status: 500 });
+  }
 
-  return NextResponse.json({ lifts, terrain_areas: terrainAreas });
+  return NextResponse.json({
+    lifts: liftsRes.data,
+    terrain_areas: terrainRes.data,
+  });
 }

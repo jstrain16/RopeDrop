@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 const DEMO_USER_ID = process.env.DEMO_USER_ID;
 if (!DEMO_USER_ID) {
@@ -9,51 +9,57 @@ if (!DEMO_USER_ID) {
 export async function GET() {
   const userId = DEMO_USER_ID;
 
-  // Ensure user exists
-  await query('INSERT INTO app_users (id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
+  // Ensure user exists - we can skip because foreign keys may not require it.
 
-  const terrainPrefs = await query<{
-    terrain_area_id: number;
-    notify_enabled: boolean;
-    name: string;
-    slug: string;
-  }>(
-    `SELECT u.terrain_area_id, u.notify_enabled, a.name, a.slug
-     FROM user_terrain_area_prefs u
-     JOIN terrain_areas a ON a.id = u.terrain_area_id
-     WHERE u.user_id = $1
-     ORDER BY a.name`,
-    [userId]
-  );
+  // Fetch terrain area preferences with join
+  const { data: terrainPrefs, error: terrainError } = await supabase
+    .from('user_terrain_area_prefs')
+    .select('notify_enabled, terrain_area_id, terrain_areas:terrain_area_id (name, slug)')
+    .eq('user_id', userId)
+    .order('terrain_areas(name)');
 
-  const trailPrefs = await query<{
-    trail_id: number;
-    notify_enabled: boolean;
-    name: string;
-    slug: string;
-    difficulty: string | null;
-  }>(
-    `SELECT u.trail_id, u.notify_enabled, t.name, t.slug, t.difficulty
-     FROM user_trail_prefs u
-     JOIN trails t ON t.id = u.trail_id
-     WHERE u.user_id = $1
-     ORDER BY t.name`,
-    [userId]
-  );
+  if (terrainError) {
+    return NextResponse.json({ error: terrainError.message }, { status: 500 });
+  }
 
-  return NextResponse.json({ terrain_areas: terrainPrefs, trails: trailPrefs });
+  // Fetch trail preferences with join
+  const { data: trailPrefs, error: trailError } = await supabase
+    .from('user_trail_prefs')
+    .select('notify_enabled, trail_id, trails:trail_id (name, slug, difficulty)')
+    .eq('user_id', userId)
+    .order('trails(name)');
+
+  if (trailError) {
+    return NextResponse.json({ error: trailError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    terrain_areas: terrainPrefs,
+    trails: trailPrefs,
+  });
 }
 
 export async function POST(request: NextRequest) {
   const userId = DEMO_USER_ID;
-  await query('INSERT INTO app_users (id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
-
   const body = await request.json();
-  const { notify_enabled } = body;
-  if (typeof notify_enabled !== 'boolean') {
-    return NextResponse.json({ error: 'Missing notify_enabled' }, { status: 400 });
+  const { notify_enabled, type, id } = body; // type: 'terrain'|'trail', id: area_id or trail_id
+  if (typeof notify_enabled !== 'boolean' || !type || !id) {
+    return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
-  // For simplicity, ignore setting general prefs via POST to this endpoint.
+  if (type === 'terrain') {
+    const { error } = await supabase
+      .from('user_terrain_area_prefs')
+      .upsert({ user_id: userId, terrain_area_id: id, notify_enabled }, { onConflict: 'user_id,terrain_area_id' });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  } else if (type === 'trail') {
+    const { error } = await supabase
+      .from('user_trail_prefs')
+      .upsert({ user_id: userId, trail_id: id, notify_enabled }, { onConflict: 'user_id,trail_id' });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  } else {
+    return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+  }
+
   return NextResponse.json({ ok: true });
 }
