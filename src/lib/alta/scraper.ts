@@ -66,7 +66,7 @@ function toStringOrNull(value: any): string | null {
   return value == null ? null : typeof value === 'string' ? value : String(value);
 }
 
-function normalizeTrail(raw: AltaRecord, liftId: number, fallbackUpdatedAt: string): CurrentTrail {
+function normalizeTrail(raw: any, liftId: number, fallbackUpdatedAt: string): CurrentTrail {
   const id = Number(raw.id ?? raw.runId ?? raw.run_id);
   const name = String(raw.name ?? raw.runName ?? raw.run_name ?? 'Unknown').trim();
   const status = String(raw.status ?? raw.statusName ?? raw.status_name ?? 'Unknown').trim();
@@ -87,7 +87,7 @@ function normalizeTrail(raw: AltaRecord, liftId: number, fallbackUpdatedAt: stri
   };
 }
 
-function normalizeLift(raw: AltaRecord): CurrentLift {
+function normalizeLift(raw: any): CurrentLift {
   const id = Number(raw.id ?? raw.liftId ?? raw.lift_id);
   const name = String(raw.name ?? raw.liftName ?? raw.lift_name ?? 'Unknown').trim();
   const status = String(raw.status ?? raw.statusName ?? raw.status_name ?? '').trim();
@@ -111,7 +111,7 @@ function normalizeLift(raw: AltaRecord): CurrentLift {
   };
 }
 
-function normalizeTerrainArea(raw: AltaRecord): CurrentTerrainArea {
+function normalizeTerrainArea(raw: any): CurrentTerrainArea {
   const id = Number(raw.id ?? raw.areaId ?? raw.area_id);
   const name = String(raw.name ?? raw.areaName ?? raw.area_name ?? 'Unknown').trim();
   const status = String(raw.status ?? raw.statusName ?? raw.status_name ?? 'unknown').trim().toLowerCase();
@@ -126,7 +126,7 @@ function normalizeTerrainArea(raw: AltaRecord): CurrentTerrainArea {
   };
 }
 
-function normalizeAccessGate(raw: AltaRecord): CurrentAccessGate {
+function normalizeAccessGate(raw: any): CurrentAccessGate {
   const id = Number(raw.id ?? raw.gateId ?? raw.gate_id);
   const name = String(raw.name ?? raw.gateName ?? raw.gate_name ?? 'Unknown').trim();
   const status = String(raw.status ?? raw.statusName ?? raw.status_name ?? '').trim();
