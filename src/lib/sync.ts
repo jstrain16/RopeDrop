@@ -1,5 +1,5 @@
 import { query } from '@/lib/db';
-import { extractWindowAltaScript, parseWindowAlta } from './scraper';
+import { extractWindowAltaScript, parseWindowAlta } from './alta/scraper';
 
 function slugify(name: string): string {
   return name
